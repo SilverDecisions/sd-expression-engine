@@ -132,6 +132,10 @@ export class ExpressionEngine {
         }
     }
 
+    static toFloat(number){
+        return math.number(number);
+    }
+
     static format(val) {
         return math.format(val);
     }
