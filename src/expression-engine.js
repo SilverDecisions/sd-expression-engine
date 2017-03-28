@@ -77,6 +77,14 @@ export class ExpressionEngine {
         return math.fraction(a);
     }
 
+    static max() {
+        return math.max(...arguments);
+    }
+
+    static min() {
+        return math.min(...arguments);
+    }
+
     static compare(a, b) {
         return math.compare(ExpressionEngine.toNumber(a), ExpressionEngine.toNumber(b))
     }
