@@ -85,6 +85,23 @@ export class ExpressionEngine {
         return math.min(...arguments);
     }
 
+    static mad() {
+        return math.mad(...arguments);
+    }
+
+    static mean() {
+        return math.mean(...arguments);
+    }
+
+    static median() {
+        return math.median(...arguments);
+    }
+
+    static std() {
+        return math.std(...arguments);
+    }
+
+
     static compare(a, b) {
         return math.compare(ExpressionEngine.toNumber(a), ExpressionEngine.toNumber(b))
     }
