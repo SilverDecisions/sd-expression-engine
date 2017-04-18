@@ -1,6 +1,19 @@
 import {Utils} from "sd-utils";
 import * as math from "./mathjs";
 import {log} from "sd-utils";
+import * as sdRandom from "sd-random";
+
+//Import random functions from sd-random to math.js
+sdRandom.functionNameList.forEach(fnName=>{
+    let importFn = {};
+    importFn[fnName] = sdRandom[fnName];
+    try{
+        math.import(importFn);
+    }catch (e){
+        log.error(e)
+    }
+});
+
 
 export class ExpressionEngine {
 
