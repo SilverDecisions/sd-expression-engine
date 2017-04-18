@@ -177,4 +177,6 @@ export class ExpressionEngine {
     static format(val) {
         return math.format(val);
     }
+
+    static randomMenuList = sdRandom.menuList.slice();
 }
