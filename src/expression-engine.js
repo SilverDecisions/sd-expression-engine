@@ -1,6 +1,5 @@
-import {Utils} from "sd-utils";
+import {Utils, log} from "sd-utils";
 import * as math from "./mathjs";
-import {log} from "sd-utils";
 import * as sdRandom from "sd-random";
 
 //Import random functions from sd-random to math.js
@@ -58,12 +57,11 @@ export class ExpressionEngine {
         return Utils.isString(expr) && expr.indexOf('=') !== -1
     }
 
-
-    evalPayoff(edge) {
-        if (ExpressionEngine.hasAssignmentExpression(edge.payoff)) {
+    evalPayoff(edge, index = 0) {
+        if (ExpressionEngine.hasAssignmentExpression(edge.payoff[index])) {
             return null;
         }
-        return this.eval(edge.payoff, true, edge.parentNode.expressionScope);
+        return this.eval(edge.payoff[index], true, edge.parentNode.expressionScope);
     }
 
     static add(a, b) {
