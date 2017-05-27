@@ -119,6 +119,13 @@ export class ExpressionEngine {
 
 
     validate(expr, scope, compileOnly = true) {
+        if (!scope) {
+            scope = this.parser.scope;
+        }
+        return ExpressionEngine.validate(expr, scope, compileOnly);
+    }
+
+    static validate(expr, scope, compileOnly = true){
         if (expr === null || expr === undefined) {
             return false;
         }
@@ -130,9 +137,6 @@ export class ExpressionEngine {
 
             if (compileOnly) {
                 return true;
-            }
-            if (!scope) {
-                scope = this.parser.scope;
             }
 
             var e = c.eval(scope);
