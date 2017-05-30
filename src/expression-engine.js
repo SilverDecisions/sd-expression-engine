@@ -85,6 +85,11 @@ export class ExpressionEngine {
     }
 
     static toNumber(a) {
+        let parsed = parseFloat(a);
+        if(parsed === Infinity || parsed === -Infinity) {
+            return parsed;
+        }
+
         return math.fraction(a);
     }
 
@@ -114,7 +119,26 @@ export class ExpressionEngine {
 
 
     static compare(a, b) {
-        return math.compare(ExpressionEngine.toNumber(a), ExpressionEngine.toNumber(b))
+        a = ExpressionEngine.toNumber(a);
+        b = ExpressionEngine.toNumber(b);
+        if(a != b ){
+            if(a == -Infinity){
+                return -1
+            }
+            if(a == Infinity){
+                return 1
+            }
+            if(b == -Infinity){
+                return 1
+            }
+            if(b == Infinity){
+                return -1
+            }
+        }else{
+            return 0;
+        }
+
+        return math.compare(a, b)
     }
 
 
@@ -147,7 +171,7 @@ export class ExpressionEngine {
     }
 
     static isExpressionObject(v) {
-        return !!v.mathjs;
+        return v && !!v.mathjs;
     }
 
     serialize(v) {
