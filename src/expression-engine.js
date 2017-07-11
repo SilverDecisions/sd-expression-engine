@@ -16,6 +16,8 @@ sdRandom.functionNameList.forEach(fnName=>{
 
 export class ExpressionEngine {
 
+    static staticParser = math.parser();
+
     constructor() {
         this.parser = math.parser();
 
@@ -26,6 +28,14 @@ export class ExpressionEngine {
     }
 
     eval(expr, asNumber = true, scope) {
+        return ExpressionEngine.doEval(expr, asNumber, scope, this.parser);
+    }
+
+    static eval(expr, asNumber = true, scope) {
+        return ExpressionEngine.doEval(expr, asNumber, scope, ExpressionEngine.staticParser);
+    }
+
+    static doEval(expr, asNumber, scope, parser){
         log.trace('eval: ' + expr);
         expr += "";
         expr = expr.trim();
@@ -37,12 +47,12 @@ export class ExpressionEngine {
             }
         }
 
-        var prevScope = this.parser.scope;
-        if (scope) {
-            this.setScope(scope);
-        }
-        var ev = this.parser.eval(expr + "");
-        this.setScope(prevScope);
+        let prevScope = parser.scope;
+
+        parser.scope = scope || {};
+
+        let ev = parser.eval(expr + "");
+        parser.scope = prevScope;
         if (!asNumber) {
             return ev;
         }
