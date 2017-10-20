@@ -13,6 +13,7 @@ var p = require('./package.json'),
     stringify = require('stringify');
 
 var Server = require('karma').Server;
+var runSequence = require('run-sequence');
 
 /* nicer browserify errors */
 var gutil = require('gulp-util')
@@ -39,8 +40,8 @@ gulp.task('clean', function (cb) {
     return del(['tmp', 'dist'], cb);
 });
 
-gulp.task('build-clean', ['clean'], function () {
-    return gulp.start('build');
+gulp.task('build-clean', function (cb) {
+    runSequence('clean', 'build', cb)
 });
 
 gulp.task('build', ['build-standalone', 'build-module'], function () {
@@ -61,7 +62,8 @@ gulp.task('build-module', function () {
     return finishBrowserifyBuild(b, jsFileName, "dist")
 });
 
-gulp.task('default', ['build-clean'],  function() {
+gulp.task('default',  function(cb) {
+    runSequence('build-clean', 'test', cb);
 });
 
 gulp.task('prepare-test', function(){
