@@ -64,6 +64,30 @@ gulp.task('build-module', function () {
 gulp.task('default', ['build-clean'],  function() {
 });
 
+gulp.task('prepare-test', function(){
+    return gulp
+        .src('test/data/*.json')
+        .pipe(require('gulp-filelist')('data-json-filelist.json', { flatten: true }))
+        .pipe(gulp.dest('test'))
+});
+
+gulp.task('test', ['prepare-test'], function (done) {
+    return runTest(true, done)
+});
+
+gulp.task('test-watch', ['prepare-test'], function (done) {
+    return runTest(false, done)
+});
+
+function runTest(singleRun, done){
+    return new Server({
+        configFile: __dirname + '/karma.conf.js',
+        singleRun: singleRun
+    }, function () {
+        done();
+    }).start();
+}
+
 function buildJs(src, standaloneName,  jsFileName, dest, external) {
     if(!external){
         external = []
