@@ -23,7 +23,26 @@
   "homepage": "https://github.com/SilverDecisions/sd-expression-engine#readme",
   "browserify": {
     "transform": [
-      ["babelify", {"presets": ["es2015"],  "plugins": ["transform-class-properties", "transform-object-assign", ["babel-plugin-transform-builtin-extend", {"globals": ["Error"]}]]}]
+      [
+        "babelify",
+        {
+          "presets": [
+            "es2015"
+          ],
+          "plugins": [
+            "transform-class-properties",
+            "transform-object-assign",
+            [
+              "babel-plugin-transform-builtin-extend",
+              {
+                "globals": [
+                  "Error"
+                ]
+              }
+            ]
+          ]
+        }
+      ]
     ]
   },
   "devDependencies": {
