@@ -67,13 +67,6 @@ export class ExpressionEngine {
         return Utils.isString(expr) && expr.indexOf('=') !== -1
     }
 
-    evalPayoff(edge, index = 0) {
-        if (ExpressionEngine.hasAssignmentExpression(edge.payoff[index])) {
-            return null;
-        }
-        return this.eval(edge.payoff[index], true, edge.parentNode.expressionScope);
-    }
-
     static add(a, b) {
         return math.add(ExpressionEngine.toNumber(a), ExpressionEngine.toNumber(b));
     }
