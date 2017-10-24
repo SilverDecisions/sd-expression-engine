@@ -3,7 +3,7 @@
 
   "increment": "patch",
   "preReleaseId": null,
-  "buildCommand": "gulp",
+  "buildCommand": "ncu -u --packageFile package.json sd-utils sd-random && npm update sd-utils sd-random && gulp",
   "changelogCommand": "git log --pretty=format:\"* %s (%h)\" [REV_RANGE]",
   "npm": {
     "publish": true
