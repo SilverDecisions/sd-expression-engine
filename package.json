@@ -1,6 +1,6 @@
 {
   "name": "sd-expression-engine",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "description": "SilverDecisions expression engine module",
   "main": "index.js",
   "scripts": {
@@ -85,7 +85,7 @@
   },
   "dependencies": {
     "mathjs": "^3.16.5",
-    "sd-utils": "0.1.9",
+    "sd-utils": "0.1.10",
     "sd-random": "0.1.1"
   }
 }
