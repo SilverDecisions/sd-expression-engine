@@ -44,7 +44,7 @@ module.exports = function (config) {
                     "babelify",
                     {
                         "presets": [
-                            "es2015"
+                            "@babel/preset-env"
                         ],
                         "plugins": [
                             "transform-class-properties",

@@ -13,7 +13,6 @@ var p = require('./package.json'),
     stringify = require('stringify');
 
 var Server = require('karma').Server;
-var runSequence = require('run-sequence');
 
 /* nicer browserify errors */
 var gutil = require('gulp-util')
@@ -36,15 +35,23 @@ for(var k in p.dependencies){
     }
 }
 
+gulp.task('prepare-test', function(){
+    return gulp
+        .src('test/data/*.json')
+        .pipe(require('gulp-filelist')('data-json-filelist.json', { flatten: true }))
+        .pipe(gulp.dest('test'))
+});
+
+gulp.task('test', gulp.series('prepare-test', function (done) {
+    return runTest(true, done)
+}));
+
+gulp.task('test-watch', gulp.series('prepare-test', function (done) {
+    return runTest(false, done)
+}));
+
 gulp.task('clean', function (cb) {
     return del(['tmp', 'dist'], cb);
-});
-
-gulp.task('build-clean', function (cb) {
-    runSequence('clean', 'build', cb)
-});
-
-gulp.task('build', ['build-standalone', 'build-module'], function () {
 });
 
 gulp.task('build-standalone', function () {
@@ -62,24 +69,13 @@ gulp.task('build-module', function () {
     return finishBrowserifyBuild(b, jsFileName, "dist")
 });
 
-gulp.task('default',  function(cb) {
-    runSequence('build-clean', 'test', cb);
-});
+gulp.task('build', gulp.parallel('build-standalone', 'build-module'));
 
-gulp.task('prepare-test', function(){
-    return gulp
-        .src('test/data/*.json')
-        .pipe(require('gulp-filelist')('data-json-filelist.json', { flatten: true }))
-        .pipe(gulp.dest('test'))
-});
+gulp.task('build-clean', gulp.series('clean', 'build'));
 
-gulp.task('test', ['prepare-test'], function (done) {
-    return runTest(true, done)
-});
+gulp.task('default', gulp.series('build-clean', 'test'));
 
-gulp.task('test-watch', ['prepare-test'], function (done) {
-    return runTest(false, done)
-});
+
 
 function runTest(singleRun, done){
     return new Server({
@@ -122,7 +118,7 @@ function buildJsDependencies(jsFileName, moduleNames, dest){
 
 function finishBrowserifyBuild(b, jsFileName, dest){
     var pipe = b
-        .transform("babelify", {presets: ["es2015"],  plugins: ["transform-class-properties", "transform-object-assign", ["babel-plugin-transform-builtin-extend", {globals: ["Error"]}]]})
+        .transform("babelify", {presets: ["@babel/preset-env"],  plugins: ["transform-class-properties", "transform-object-assign", ["babel-plugin-transform-builtin-extend", {globals: ["Error"]}]]})
         .bundle()
         .on('error', map_error)
         .pipe(plugins.plumber({ errorHandler: onError }))
