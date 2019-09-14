@@ -10,7 +10,6 @@ module.exports = function (config) {
         ],
         files:[
             'node_modules/jquery/dist/jquery.js',
-            'node_modules/jasmine-jquery/lib/jasmine-jquery.js',
             'src/**/*.js',
             'test/**/*.js',
             // JSON fixture
