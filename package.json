@@ -84,7 +84,7 @@
     "yargs": "^17.1.1"
   },
   "dependencies": {
-    "mathjs": "^5.10.3",
+    "mathjs": "9.3.2",
     "sd-utils": "^0.1.14",
     "sd-random": "^0.1.3"
   }

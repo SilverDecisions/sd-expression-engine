@@ -3,12 +3,12 @@ import * as math from "./mathjs";
 import * as sdRandom from "sd-random";
 
 //Import random functions from sd-random to math.js
-sdRandom.functionNameList.forEach(fnName=>{
+sdRandom.functionNameList.forEach(fnName => {
     let importFn = {};
     importFn[fnName] = sdRandom[fnName];
-    try{
+    try {
         math.import(importFn);
-    }catch (e){
+    } catch (e) {
         log.error(e)
     }
 });
@@ -35,7 +35,7 @@ export class ExpressionEngine {
         return ExpressionEngine.doEval(expr, asNumber, scope, ExpressionEngine.staticParser);
     }
 
-    static doEval(expr, asNumber, scope, parser){
+    static doEval(expr, asNumber, scope, parser) {
         log.trace('eval: ' + expr);
         expr += "";
         expr = expr.trim();
@@ -51,7 +51,7 @@ export class ExpressionEngine {
 
         parser.scope = scope || {};
 
-        let ev = parser.eval(expr + "");
+        let ev = parser.evaluate(expr + "");
         parser.scope = prevScope;
         if (!asNumber) {
             return ev;
@@ -89,7 +89,7 @@ export class ExpressionEngine {
 
     static toNumber(a) {
         let parsed = parseFloat(a);
-        if(parsed === Infinity || parsed === -Infinity) {
+        if (parsed === Infinity || parsed === -Infinity) {
             return parsed;
         }
 
@@ -124,20 +124,20 @@ export class ExpressionEngine {
     static compare(a, b) {
         a = ExpressionEngine.toNumber(a);
         b = ExpressionEngine.toNumber(b);
-        if(a != b ){
-            if(a == -Infinity){
+        if (a !== b) {
+            if (a === -Infinity) {
                 return -1
             }
-            if(a == Infinity){
+            if (a === Infinity) {
                 return 1
             }
-            if(b == -Infinity){
+            if (b === -Infinity) {
                 return 1
             }
-            if(b == Infinity){
+            if (b === Infinity) {
                 return -1
             }
-        }else{
+        } else {
             return 0;
         }
 
@@ -152,7 +152,7 @@ export class ExpressionEngine {
         return ExpressionEngine.validate(expr, scope, compileOnly);
     }
 
-    static validate(expr, scope, compileOnly = true){
+    static validate(expr, scope, compileOnly = true) {
         if (expr === null || expr === undefined) {
             return false;
         }
@@ -160,13 +160,13 @@ export class ExpressionEngine {
         try {
             expr += "";
             expr = expr.trim();
-            var c = math.compile(expr);
+            const c = math.compile(expr);
 
             if (compileOnly) {
                 return true;
             }
 
-            var e = c.eval(scope);
+            const e = c.evaluate(scope);
             return Utils.isNumeric(e);
         } catch (e) {
             return false;
@@ -182,11 +182,11 @@ export class ExpressionEngine {
     }
 
     getJsonReviver() {
-        return math.json.reviver;
+        return math.reviver;
     }
 
     getJsonReplacer() {
-        var self = this;
+        const self = this;
         return function (k, v) {
             if (v !== null && v !== undefined && ExpressionEngine.isExpressionObject(v)) {
                 try {
@@ -199,7 +199,7 @@ export class ExpressionEngine {
         }
     }
 
-    static toFloat(number){
+    static toFloat(number) {
         return math.number(number);
     }
 
