@@ -1,4 +1,4 @@
-import {Utils, log} from "sd-utils";
+import {log, Utils} from "sd-utils";
 import * as math from "./mathjs";
 import * as sdRandom from "sd-random";
 
@@ -16,26 +16,15 @@ sdRandom.functionNameList.forEach(fnName => {
 
 export class ExpressionEngine {
 
-    static staticParser = math.parser();
-
     constructor() {
-        this.parser = math.parser();
 
-    }
-
-    setScope(scope) {
-        this.parser.scope = scope;
     }
 
     eval(expr, asNumber = true, scope) {
-        return ExpressionEngine.doEval(expr, asNumber, scope, this.parser);
+        return ExpressionEngine.eval(expr, asNumber, scope);
     }
 
     static eval(expr, asNumber = true, scope) {
-        return ExpressionEngine.doEval(expr, asNumber, scope, ExpressionEngine.staticParser);
-    }
-
-    static doEval(expr, asNumber, scope, parser) {
         log.trace('eval: ' + expr);
         expr += "";
         expr = expr.trim();
@@ -47,12 +36,8 @@ export class ExpressionEngine {
             }
         }
 
-        let prevScope = parser.scope;
+        let ev = math.evaluate(expr + "", scope || {});
 
-        parser.scope = scope || {};
-
-        let ev = parser.evaluate(expr + "");
-        parser.scope = prevScope;
         if (!asNumber) {
             return ev;
         }
@@ -147,7 +132,7 @@ export class ExpressionEngine {
 
     validate(expr, scope, compileOnly = true) {
         if (!scope) {
-            scope = this.parser.scope;
+            scope = {};
         }
         return ExpressionEngine.validate(expr, scope, compileOnly);
     }
