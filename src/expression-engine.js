@@ -105,6 +105,13 @@ export class ExpressionEngine {
         return math.std(...arguments);
     }
 
+    static print(){
+        return math.print.apply(math, arguments)
+    }
+
+    print() {
+        return ExpressionEngine.print.apply(this, arguments);
+    }
 
     static compare(a, b) {
         a = ExpressionEngine.toNumber(a);
@@ -188,8 +195,12 @@ export class ExpressionEngine {
         return math.number(number);
     }
 
-    static format(val) {
-        return math.format(val);
+    static format() {
+        return math.format.apply(math, arguments);
+    }
+
+    format() {
+        return ExpressionEngine.format.apply(this, arguments);
     }
 
     static randomMenuList = sdRandom.menuList.slice();
