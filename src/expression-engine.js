@@ -15,12 +15,18 @@ sdRandom.functionNameList.forEach(fnName => {
 
 // Math.js 14+ (fraction.js 5) computes Fractions exactly with bigint numerators
 // and denominators: a sum of many evaluated (float) values, e.g. the expected
-// values of the probabilistic sensitivity analysis, grows without limit, gets
-// slow and its JS number (valueOf) becomes NaN. With Math.js 9 (fraction.js 4,
-// JS numbers) Fractions stayed within the safe integer range. The arithmetic
-// helpers therefore round a result whose denominator exceeds MAX_DENOMINATOR to
-// the closest fraction with a denominator up to MAX_DENOMINATOR.
-const MAX_DENOMINATOR = BigInt(Number.MAX_SAFE_INTEGER);
+// values of the probabilistic sensitivity analysis, grows to thousands of digits,
+// gets slow and its JS number (valueOf) becomes NaN. With Math.js 9 (fraction.js
+// 4) numerator and denominator were doubles: about 16 significant digits at any
+// magnitude. The arithmetic helpers therefore keep a result exact while its
+// numerator and denominator have at most MAX_BITS bits, and otherwise replace it
+// with the first continued-fraction convergent within a relative error of
+// 2^-RELATIVE_BITS (about 5e-20). Small values keep their magnitude; results
+// are exact up to 64-bit numerators and denominators (Math.js 9: 53 bits) and
+// otherwise about 2000 times more precise than a double. The bounds keep the
+// cost of long sums close to Math.js 9.
+const MAX_BITS = 64;
+const RELATIVE_BITS = BigInt(64);
 const ZERO = BigInt(0);
 const ONE = BigInt(1);
 
@@ -28,20 +34,22 @@ function abs(v) {
     return v < ZERO ? -v : v;
 }
 
-// best rational approximation with a bounded denominator (continued fractions)
-function limitDenominator(f) {
-    if (!math.isFraction(f) || f.d <= MAX_DENOMINATOR) {
+function bitLength(v) {
+    return v === ZERO ? 0 : abs(v).toString(2).length;
+}
+
+function roundFraction(f) {
+    if (!math.isFraction(f) || (bitLength(f.n) <= MAX_BITS && bitLength(f.d) <= MAX_BITS)) {
         return f;
     }
+    // f.n > 0 here (zero is 0/1); convergents p1/q1 of f.n/f.d
+    const x = f.n, y = f.d;
     let p0 = ZERO, q0 = ONE, p1 = ONE, q1 = ZERO;
-    let n = f.n, d = f.d;
-    while (true) {
+    let n = x, d = y;
+    while (d !== ZERO) {
         const a = n / d;
-        const q2 = q0 + a * q1;
-        if (q2 > MAX_DENOMINATOR) {
-            break;
-        }
-        const p2 = p0 + a * p1;
+        const p2 = a * p1 + p0;
+        const q2 = a * q1 + q0;
         p0 = p1;
         q0 = q1;
         p1 = p2;
@@ -49,25 +57,38 @@ function limitDenominator(f) {
         const r = n - a * d;
         n = d;
         d = r;
+        // |p1/q1 - x/y| <= 2^-RELATIVE_BITS * x/y, cross-multiplied
+        if ((abs(p1 * y - x * q1) << RELATIVE_BITS) <= x * q1) {
+            break;
+        }
     }
-    const k = (MAX_DENOMINATOR - q0) / q1;
-    const p = p0 + k * p1;
-    const q = q0 + k * q1;
-    // |p1/q1 - x| <= |p/q - x|, cross-multiplied
-    const closer = abs(p1 * f.d - f.n * q1) * q <= abs(p * f.d - f.n * q) * q1;
-    return closer ? new math.Fraction(f.s * p1, q1) : new math.Fraction(f.s * p, q);
+    return new math.Fraction(f.s * p1, q1);
 }
 
-// JS number of a Fraction; fraction.js 5 valueOf() is NaN when numerator and
-// denominator are both beyond the double range
+// JS number of a Fraction. fraction.js 5 valueOf() is Number(n) / Number(d),
+// which is Infinity or NaN when n or d is beyond the double range (about 2^1024)
+// although the quotient is not; such Fractions are divided with bigint to 64
+// significant bits and scaled by a power of two.
 function fractionToFloat(f) {
-    const v = f.valueOf();
-    if (!isNaN(v)) {
-        return v;
+    const nBits = bitLength(f.n);
+    const dBits = bitLength(f.d);
+    if (nBits <= 1000 && dBits <= 1000) {
+        return f.valueOf();
     }
-    const bits = Math.max(f.n.toString(2).length, f.d.toString(2).length) - 1000;
-    const shift = BigInt(bits > 0 ? bits : 0);
-    return Number(f.s * (f.n >> shift)) / Number(f.d >> shift);
+    if (f.n === ZERO) {
+        return 0;
+    }
+    // q = floor(n * 2^-e / d) has 64 or 65 bits
+    const e = nBits - dBits - 64;
+    const q = e >= 0 ? f.n / (f.d << BigInt(e)) : (f.n << BigInt(-e)) / f.d;
+    let v = Number(q);
+    let k = e;
+    while (k !== 0) {
+        const step = Math.max(-1000, Math.min(1000, k));
+        v *= Math.pow(2, step);
+        k -= step;
+    }
+    return f.s < ZERO ? -v : v;
 }
 
 
@@ -110,19 +131,19 @@ export class ExpressionEngine {
     }
 
     static add(a, b) {
-        return limitDenominator(math.add(ExpressionEngine.toNumber(a), ExpressionEngine.toNumber(b)));
+        return roundFraction(math.add(ExpressionEngine.toNumber(a), ExpressionEngine.toNumber(b)));
     }
 
     static subtract(a, b) {
-        return limitDenominator(math.subtract(ExpressionEngine.toNumber(a), ExpressionEngine.toNumber(b)));
+        return roundFraction(math.subtract(ExpressionEngine.toNumber(a), ExpressionEngine.toNumber(b)));
     }
 
     static divide(a, b) {
-        return limitDenominator(math.divide(ExpressionEngine.toNumber(a), ExpressionEngine.toNumber(b)));
+        return roundFraction(math.divide(ExpressionEngine.toNumber(a), ExpressionEngine.toNumber(b)));
     }
 
     static multiply(a, b) {
-        return limitDenominator(math.multiply(ExpressionEngine.toNumber(a), ExpressionEngine.toNumber(b)));
+        return roundFraction(math.multiply(ExpressionEngine.toNumber(a), ExpressionEngine.toNumber(b)));
     }
 
     static round(a, places) {

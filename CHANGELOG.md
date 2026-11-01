@@ -5,14 +5,18 @@
 ### Dependencies: Math.js 15.2.0 (from 9.5.0)
 
 - **Runtime requirements**: Math.js 13+ requires ES2020 and `BigInt` (Chrome and
-  Edge 80+, Firefox 74+, Safari 14+; no Internet Explorer). The bundles contain
+  Edge 80+, Firefox 74+, Safari 14+ from the ES2020 features used, not tested in
+  those browsers; no Internet Explorer). The bundles contain
   Math.js as published (ES2020 syntax); the package sources still compile to ES5.
-- Fractions use fraction.js 5 (`bigint`). The arithmetic helpers (`add`,
-  `subtract`, `multiply`, `divide`) round a result whose denominator exceeds
-  2^53 - 1 to the closest fraction with a smaller denominator, so long sums (the
-  mean of a probabilistic sensitivity analysis) stay fast and finite as with
-  Math.js 9 (without it they grew to thousands of digits and `toFloat` returned
-  `NaN`); `toFloat` handles Fractions beyond the double range.
+- Fractions use fraction.js 5 (`bigint`) and are exact up to any size; long
+  sums (the mean of a probabilistic sensitivity analysis) grew to thousands of
+  digits, got slow and `toFloat` returned `NaN`. The arithmetic helpers (`add`,
+  `subtract`, `multiply`, `divide`) therefore keep a result exact while its
+  numerator and denominator have at most 64 bits and otherwise replace it with
+  a simpler fraction (continued-fraction convergent) within a relative error of 2^-64 (0.1.17: doubles,
+  exact up to 53 bits, relative error up to 2^-52 per operation). Small values
+  keep their magnitude. `toFloat` is accurate for Fractions beyond the double
+  range.
 - `eval(expr, true)` rejects a `Unit` result as before (Math.js 14+ would convert
   the value of the unit).
 - The JSON form of a Fraction (`toJSON`, data model DTO of the job repository)

@@ -30,7 +30,8 @@ Built files (`dist/`, committed, rebuilt by the release):
 The plain files carry an inline source map, the minified ones a `.map` file.
 
 Runtime requirements: Math.js 13+ requires ES2020 and `BigInt` (Chrome and Edge 80+,
-Firefox 74+, Safari 14+, no Internet Explorer). The package sources compile to
+Firefox 74+, Safari 14+ from the ES2020 features used, not tested in those
+browsers; no Internet Explorer). The package sources compile to
 ES5; the bundles and consumer bundles contain Math.js as published (ES2020).
 Releases up to 0.1.17 (Math.js 9.5.0) ran on ES5 engines.
 
