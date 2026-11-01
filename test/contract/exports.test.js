@@ -79,9 +79,15 @@ function extraGlobals(sandbox, before) {
 }
 
 // Minimal AMD loader: the module value is the factory's return value or the
-// injected `exports` object (browserify UMD: define([], f); Rollup: define(['exports'], f)).
+// injected `exports` object (browserify UMD: define([], f); Rollup: define(f)
+// or define(['exports'], f)). No other dependencies are expected.
 function amdDefine(onDefine) {
     const define = (deps, factory) => {
+        if (typeof deps === 'function') {
+            factory = deps;
+            assert.equal(factory.length, 0, 'define(factory) without the require/exports/module form');
+            deps = [];
+        }
         const exports = {};
         const result = factory.apply(null, deps.map(dep => {
             assert.equal(dep, 'exports', 'no other AMD dependencies');
