@@ -4,7 +4,8 @@
   "description": "SilverDecisions expression engine module",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node test/contract/run.js",
+    "test:published": "node test/contract/run.js --published=0.1.17",
     "release": "release-it --verbose"
   },
   "repository": {

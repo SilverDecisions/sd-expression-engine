@@ -11,7 +11,7 @@ module.exports = function (config) {
         files:[
             'node_modules/jquery/dist/jquery.js',
             'src/**/*.js',
-            'test/**/*.js',
+            'test/specs/**/*.js',
             // JSON fixture
             { pattern:  'test/data-json-filelist.json',
                 watched:  true,
@@ -33,7 +33,7 @@ module.exports = function (config) {
 
         preprocessors: {
             'src/**/*.js': ['browserify'],
-            'test/**/*.js': ['browserify']
+            'test/specs/**/*.js': ['browserify']
         },
 
         browserify: {
