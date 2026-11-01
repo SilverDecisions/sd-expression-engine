@@ -3,7 +3,9 @@
 //
 //  1. copy the files of the working tree (git ls-files) to a temp dir, `npm ci` there
 //  2. `npm run build`: exit code 0, no Rollup warnings
-//  3. all dist artifacts exist, nothing else is in dist/; the bundles are ES5;
+//  3. all dist artifacts exist, nothing else is in dist/; the bundles parse as
+//     ES2020 (BUNDLE_ECMA_VERSION: Math.js 13+ requires ES2020 and bigint and is
+//     bundled as published; the package's own sources are checked for ES5 in 6);
 //     their source maps (inline in the plain files, .map files next to the
 //     minified ones) are version 3 JSON with sources and sourcesContent, and the
 //     position of a known statement of src/expression-engine.js maps back to
@@ -54,6 +56,9 @@ const CONSUMER_DEPS = ['browserify@17', 'babelify@10', '@babel/core@7', '@babel/
     'babel-plugin-transform-class-properties@6', 'babel-plugin-transform-object-assign@6',
     'babel-plugin-transform-builtin-extend@1'];
 const TARGETS = ['standalone', 'standalone.min', 'module', 'module.min'];
+// syntax level of the dist bundles (Math.js 15 lib/cjs uses ES2020: bigint
+// literals, optional chaining); the package sources compile to ES5
+const BUNDLE_ECMA_VERSION = 2020;
 
 const args = process.argv.slice(2);
 const flag = name => args.includes(name);
@@ -120,10 +125,10 @@ function copyTree(dest) {
 
 // acorn from the isolated copy (installed by its `npm ci`)
 let toolsDir = root;
-function isES5(file) {
+function isES5(file, ecmaVersion) {
     const acorn = require(require.resolve('acorn', {paths: [toolsDir]}));
     try {
-        acorn.parse(fs.readFileSync(file, 'utf8'), {ecmaVersion: 5});
+        acorn.parse(fs.readFileSync(file, 'utf8'), {ecmaVersion: ecmaVersion || 5});
         return null;
     } catch (e) {
         return e.message;
@@ -305,8 +310,8 @@ function main() {
                 continue;
             }
             if (a.endsWith('.js')) {
-                const err = isES5(f);
-                err ? fail(a + ' is not ES5: ' + err) : null;
+                const err = isES5(f, BUNDLE_ECMA_VERSION);
+                err ? fail(a + ' is not ES' + BUNDLE_ECMA_VERSION + ': ' + err) : null;
                 const problem = sourceMapProblem(f, a.endsWith('.min.js'), copy);
                 problem ? fail(a + ': ' + problem) : null;
             }
@@ -315,7 +320,7 @@ function main() {
             .map(f => 'dist/' + String(f).split(path.sep).join('/'))
             .filter(f => fs.statSync(path.join(copy, f)).isFile() && !ARTIFACTS.includes(f));
         extra.length ? fail('unexpected files in dist/: ' + extra.join(', ')) : null;
-        ok(ARTIFACTS.length + ' artifacts checked (ES5, source maps: JSON, sources, sourcesContent, mapping of ' + ERROR_FILE + '); sizes: ' +
+        ok(ARTIFACTS.length + ' artifacts checked (ES' + BUNDLE_ECMA_VERSION + ', source maps: JSON, sources, sourcesContent, mapping of ' + ERROR_FILE + '); sizes: ' +
             ARTIFACTS.filter(a => fs.existsSync(path.join(copy, a))).map(a => path.basename(path.dirname(a)) + '/' + path.basename(a) + ' ' +
                 Math.round(fs.statSync(path.join(copy, a)).size / 1024) + ' KiB').join(', '));
 
@@ -422,7 +427,9 @@ function checkPackage(tmp, copy) {
                 return false;
             }
         }).map(n => n + '@' + require(path.join(modules, n, 'package.json')).version);
-        console.log('info full consumer bundle is not ES5 (' + err + '): fresh Math.js dependencies ' + (notES5.join(', ') || '?'));
+        console.log('info full consumer bundle is not ES5 (' + err + '): Math.js ' + installed('mathjs') + ' and its dependencies ' + (notES5.join(', ') || '?'));
+        const err2020 = isES5(bundle, BUNDLE_ECMA_VERSION);
+        err2020 ? fail('consumer bundle is not ES' + BUNDLE_ECMA_VERSION + ': ' + err2020) : ok('consumer bundle parses as ES' + BUNDLE_ECMA_VERSION);
     } else {
         ok('browserify bundle of require(\'' + NAME + '\') is ES5');
     }

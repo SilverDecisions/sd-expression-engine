@@ -13,7 +13,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const {ExpressionEngine, sdUtils} = require('./load');
+const {ExpressionEngine, sdUtils, mathjsMajor} = require('./load');
 const {assertFraction, readFixture, FIXTURES, evaluateDiagram} = require('./helpers');
 
 const {Utils} = sdUtils;
@@ -80,7 +80,8 @@ test('isExpressionObject: objects with a mathjs field (the JSON form of Math.js 
     }
     // a live Fraction has no own mathjs field: the replacer sees its toJSON() form
     assert.ok(!ExpressionEngine.isExpressionObject(N('1/3')));
-    assert.deepEqual(N('-1/3').toJSON(), {mathjs: 'Fraction', n: -1, d: 3});
+    // [version difference] Math.js 14+ (fraction.js 5, bigint) writes n and d as strings
+    assert.deepEqual(N('-1/3').toJSON(), mathjsMajor < 14 ? {mathjs: 'Fraction', n: -1, d: 3} : {mathjs: 'Fraction', n: '-1', d: '3'});
 });
 
 test('getJsonReplacer in JSON.stringify: Fractions as fraction strings, other values unchanged', () => {

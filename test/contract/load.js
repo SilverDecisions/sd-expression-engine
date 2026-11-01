@@ -15,6 +15,11 @@
 //   <file>          a CommonJS file exporting the module namespace
 // SD_EXPRESSION_ENGINE_DIST points at another dist/ directory (default: ./dist),
 // e.g. the dist/ of the published package extracted from `npm pack`.
+// SD_EXPRESSION_ENGINE_BASELINE=<release> tests built artifacts of a release
+// against the contract of that release (its Math.js version and the
+// version-dependent expectations), e.g. 0.1.17 for the committed dist/ and the
+// published package; without it the expectations of the current sources and
+// package.json (their Math.js version) apply.
 // SD_UTILS_BUNDLE / SD_RANDOM_BUNDLE are the `require` bundles loaded before the
 // module bundle (default: dist/sd-utils.js / dist/sd-random.js of the installed
 // packages).
@@ -35,6 +40,17 @@ const childProcess = require('child_process');
 const root = path.resolve(__dirname, '..', '..');
 const target = process.env.SD_EXPRESSION_ENGINE_TARGET || 'standalone';
 const dist = path.resolve(root, process.env.SD_EXPRESSION_ENGINE_DIST || 'dist');
+// Math.js version of each release whose artifacts can be tested
+const BASELINES = {'0.1.17': {mathjs: '9.5.0'}};
+const baseline = process.env.SD_EXPRESSION_ENGINE_BASELINE || null;
+if (baseline && !BASELINES[baseline]) {
+    throw new Error('unknown SD_EXPRESSION_ENGINE_BASELINE ' + baseline + ', known: ' + Object.keys(BASELINES).join(', '));
+}
+if (baseline && target === 'source') {
+    throw new Error('SD_EXPRESSION_ENGINE_BASELINE applies to built artifacts, not to the sources');
+}
+const expectedMathjs = baseline ? BASELINES[baseline].mathjs
+    : JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).dependencies.mathjs;
 
 const rng = (function () {
     const original = Math.random;
@@ -169,6 +185,11 @@ function loadSdUtils() {
 
 const loaded = load();
 loaded.target = target;
+loaded.baseline = baseline;
+// the Math.js version the tested artifact must contain, and its major version
+// for the version-dependent expectations
+loaded.expectedMathjs = expectedMathjs;
+loaded.mathjsMajor = parseInt(expectedMathjs, 10);
 loaded.ExpressionEngine = loaded.engine.ExpressionEngine;
 loaded.isModuleBundle = /^module(\.min)?$/.test(target);
 loaded.isStandalone = /^standalone(\.min)?$/.test(target);

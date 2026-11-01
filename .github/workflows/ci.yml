@@ -33,9 +33,12 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
-      # The committed dist/ is the 0.1.17 release build (gulp/browserify): the
-      # contract tests and the Jasmine specs must keep passing on it
-      - name: Tests on the committed dist (0.1.17 build) and the sources
+      # The committed dist/ is the 0.1.17 release build (gulp/browserify, Math.js
+      # 9.5.0): tested against the contract of that release
+      - name: Committed dist against the 0.1.17 contract
+        run: npm run test:baseline
+
+      - name: Sources (browserify + the package transform) and Jasmine specs
         run: npm test
 
       # Isolated copy: npm ci, build, artifacts (ES5, source maps), tests on the
@@ -71,7 +74,11 @@ jobs:
         run: npm run build
 
       - name: Tests on the fresh dist (standalone and module bundles, plain and minified), the sources and the Jasmine specs
-        run: npm test
+        shell: bash
+        run: |
+          set -e
+          npm run test:dist
+          npm test
 
       - name: The build changed nothing outside dist/
         shell: bash

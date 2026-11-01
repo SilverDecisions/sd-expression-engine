@@ -29,6 +29,12 @@ test('exports: ExpressionEngine only, with the __esModule flag', () => {
     assert.ok(new ExpressionEngine() instanceof ExpressionEngine);
 });
 
+test('the tested artifact contains the expected Math.js version', () => {
+    // package.json for the sources and fresh builds, the release's version for
+    // SD_EXPRESSION_ENGINE_BASELINE (the committed dist/ is the 0.1.17 build)
+    assert.equal(ExpressionEngine.eval('version', false), loaded.expectedMathjs);
+});
+
 test('static and instance API', () => {
     const statics = Object.getOwnPropertyNames(ExpressionEngine).filter(n => !['length', 'name', 'prototype'].includes(n));
     assert.deepEqual(statics.sort(), STATIC);
@@ -59,7 +65,7 @@ test('package.json keeps the entry points, the runtime dependencies and the brow
         }]]
     });
     assert.deepEqual(Object.keys(pkg.dependencies).sort(), ['mathjs', 'sd-random', 'sd-utils']);
-    assert.equal(pkg.dependencies.mathjs, '9.5.0', 'Math.js is pinned exactly');
+    assert.match(pkg.dependencies.mathjs, /^\d+\.\d+\.\d+$/, 'Math.js is pinned exactly');
     // sources consumers bundle (index.js -> src/) and the standalone entry
     for (const file of ['index.js', 'standalone.index.js', 'src/index.js', 'src/expression-engine.js', 'src/mathjs.js']) {
         assert.ok(fs.existsSync(path.join(loaded.root, file)), file);
@@ -157,7 +163,6 @@ test('module bundle: global require exposing sd-expression-engine, cached; sd-ut
     const code = fs.readFileSync(bundleFile(), 'utf8');
     assert.doesNotMatch(code, /Trapezoidal\(0\.0,1\.0,0\.25,0\.75\)/, 'sd-random not bundled');
     assert.doesNotMatch(code, /lodash\.com|__lodash_hash_undefined__/, 'sd-utils / lodash not bundled');
-    assert.equal(ExpressionEngine.eval('version', false), '9.5.0', 'Math.js 9.5.0 inside the bundle');
 });
 
 // Real browserify `require` bundle loaded after the engine, exposing a module
