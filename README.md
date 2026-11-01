@@ -1,8 +1,74 @@
 # sd-expression-engine
-SilverDecisions expression engine module
+SilverDecisions expression engine module: evaluation of the expressions of
+SilverDecisions diagrams with [Math.js](https://mathjs.org/) 9.5.0, exact
+Fraction arithmetic and the sd-random distributions.
 
-[![Build Status](https://travis-ci.org/SilverDecisions/sd-expression-engine.svg?branch=master)](https://travis-ci.org/SilverDecisions/sd-expression-engine)
-[![codecov](https://codecov.io/gh/SilverDecisions/sd-expression-engine/branch/master/graph/badge.svg)](https://codecov.io/gh/SilverDecisions/sd-expression-engine)
+[![CI](https://github.com/SilverDecisions/sd-expression-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/SilverDecisions/sd-expression-engine/actions/workflows/ci.yml)
+
+## Usage
+
+```js
+import {ExpressionEngine} from 'sd-expression-engine';   // index.js -> src/ (ES2015 sources)
+
+const engine = new ExpressionEngine();
+const scope = {};
+engine.eval('p = 1/3', false, scope);          // code: Math.js value, assigned into scope
+ExpressionEngine.eval('p * 3', true, scope);   // payoff / probability: Fraction 1
+```
+
+Consumers that bundle the package (SilverDecisions, sd-computations) compile
+`index.js` and `src/` with the `browserify.transform` field of `package.json`
+(babelify, `@babel/preset-env`, Babel 6 `transform-class-properties` etc.).
+
+Built files (`dist/`, committed, rebuilt by the release):
+
+| File | Format |
+|---|---|
+| `dist/sd-expression-engine.js`, `.min.js` (+ `.map`) | defines a global `require` exposing `require('sd-expression-engine')`; `sd-utils` and `sd-random` come from the global `require` of their own `dist/` bundles (loaded before or after it, e.g. in the sd-computations job worker), Math.js is bundled |
+| `dist/standalone/sd-expression-engine.js`, `.min.js` (+ `.map`) | UMD: CommonJS, AMD or the global `SilverDecisions.ExpressionEngine` (an existing `SilverDecisions` object is extended); everything bundled |
+
+The plain files carry an inline source map, the minified ones a `.map` file.
+
+## Development
+
+Node 24 (`.nvmrc`); CI runs Node 22 and 24 on Linux and a build smoke test on
+Windows. Math.js is pinned to exactly 9.5.0.
+
+```bash
+npm ci
+npm run build        # dist/ with Rollup (rollup.config.mjs), ~2 min (terser on the large bundles)
+npm test             # contract tests on dist/ and the sources, Jasmine specs in Node
+npm run test:build   # isolated build check, see scripts/check-build.js
+```
+
+`npm run build` rewrites the committed `dist/`; build in a copy (or use
+`npm run test:build`) unless you are preparing a release.
+
+Build: Rollup bundles CommonJS modules; the sources of this package, sd-utils
+and sd-random are compiled first by `scripts/browserify-transform.mjs` with the
+Babel 7 options of their own `browserify.transform` field and CommonJS modules,
+exactly as babelify compiles them for consumers, so the module interop
+(`src/mathjs.js` sets `module.exports`, `import * as math`) is Babel's.
+Compilation target: ES5 syntax (`@babel/preset-env` without targets, no
+browserslist config); class fields are assignments (Babel 6
+`transform-class-properties`). Math.js (`lib/cjs`, through its `require`
+export condition, as browserify resolves `main`) and its dependencies are
+bundled as published, not compiled; the `browser` fields are honoured
+(decimal.js, seedrandom without Node's `crypto`). The Babel 6 plugins are kept
+for compatibility with the consumers' transform; a migration of that
+configuration (and Babel 8) is a separate task.
+
+`npm run test:build` (`scripts/check-build.js`): copy of the working tree,
+`npm ci`, build without warnings, the six artifacts exist and the bundles are
+ES5, source maps are valid JSON with `sources`/`sourcesContent` and map a known
+statement back to `src/expression-engine.js`, nothing changed outside `dist/`,
+contract tests on the four fresh bundles and the sources, Jasmine specs,
+`npm pack` installed into an empty browserify 17 + babelify 10 consumer (contract
+tests on its bundle of `require('sd-expression-engine')` and on the installed
+`dist/` bundles), and a syntax error in the sources fails the build with exit
+code 1 and a diagnostic naming the file and line. Options: `--keep`,
+`--skip-consumer`, `--sd-utils=<.tgz>`, `--sd-random=<.tgz>` (unreleased
+dependencies, installed with `--no-save`).
 
 ## Tests
 
@@ -22,12 +88,19 @@ artifact, chosen with `SD_EXPRESSION_ENGINE_TARGET`:
 `SD_EXPRESSION_ENGINE_DIST=<dir>` tests the bundles of another `dist/` directory.
 
 ```bash
-npm test                                   # all five targets on ./dist and the sources
+npm test                                   # all five targets on ./dist and the sources, then Jasmine
 SD_EXPRESSION_ENGINE_TARGET=module node --test test/contract/   # one target
 node test/contract/run.js --targets=module,source
+node test/contract/run.js --dist=<dir>     # another dist/ directory
 npm run test:published                     # the bundles of sd-expression-engine@0.1.17 from npm
-npx gulp test                              # the Jasmine specs (test/specs) in Karma
+npx jasmine --config=test/jasmine.json     # the Jasmine specs (test/specs) in Node
 ```
+
+The committed `dist/` is the 0.1.17 release build (gulp/browserify): `npm test`
+on a fresh checkout tests it (CI does so as well), `npm run test:build` tests a
+fresh build. The Jasmine specs compile the sources with `@babel/register`
+(`test/jasmine-babel.js`) and run in Node; the bundles are not run in a real
+browser or Web Worker by these tests (see the integration notes of the PRs).
 
 Randomness: sd-random keeps a reference to `Math.random` taken when it is
 loaded, so `test/contract/load.js` installs a `Math.random` dispatcher before any

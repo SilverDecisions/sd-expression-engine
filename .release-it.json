@@ -4,7 +4,7 @@
   "increment": "patch",
   "preReleaseId": null,
   "hooks": {
-    "after:bump": ["ncu -u --packageFile package.json sd-utils sd-random", "npm update sd-utils sd-random", "gulp"]
+    "after:bump": ["ncu -u --packageFile package.json sd-utils sd-random", "npm update sd-utils sd-random", "npm run build", "npm test"]
   },
   "changelogCommand": "git log --pretty=format:\"* %s (%h)\" [REV_RANGE]",
   "npm": {
