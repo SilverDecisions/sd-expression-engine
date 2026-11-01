@@ -52,11 +52,18 @@ which change with sensitivity analyses and random draws.
 - New field written on save, e.g. `data.expressionSemantics: "mathjs-15"` (a
   name of the expression semantics, not of the app version, so that a later
   Math.js upgrade can add another one).
-- Jobs: sd-computations stores the semantics of the engine in every job
-  execution (`expressionSemantics: "mathjs-<major>"`; records without it are
-  Math.js 9) and continues a stopped job only under the semantics it was
-  started with; otherwise the old job is kept and a new one starts from the
-  beginning (sd-computations `fix/job-resume-semantics`).
+- Jobs: sd-computations (`fix/job-resume-semantics`) stores an expression
+  semantics profile in every job execution: profile version, full Math.js
+  version and the whole Math.js configuration (records without it: 0.1.17 with
+  its defaults). A stopped job is continued only under the same profile;
+  otherwise the old job is kept and a new one starts from the beginning, and a
+  worker with another profile than the page does not compute the page's jobs.
+  The profile is read from the shared Math.js instance, so a decision on the
+  comparison tolerances (`absTol`) changes it, and so does `config(...)` in an
+  expression: such a diagram cannot run restartable analyses in the
+  SilverDecisions worker (the worker evaluated its code, the page did not) until
+  expressions either may not change the configuration or each evaluation gets a
+  configuration owned by the diagram (a decision, see below).
 
 ### 2. Classification on opening a legacy file (before any recomputation)
 
@@ -131,5 +138,9 @@ semantics of the current data model; a job stopped by 0.1.x is not continued
    or the Math.js 13+ tolerances.
 3. Handling of legacy diagrams (sections 1-5) or an alternative, before a
    SilverDecisions release with Math.js 15.
-4. JSON form of Fractions with string `n` / `d` in the job repository (read
+4. Expressions that change the shared Math.js instance (`config(...)`,
+   `import`, `createUnit`): allowed as now (their jobs in the worker are refused),
+   rejected, or isolated per diagram; this decides whether the expression
+   semantics profile of jobs can be guaranteed for every diagram.
+5. JSON form of Fractions with string `n` / `d` in the job repository (read
    back from 0.1.17 records works, the reverse does not).
