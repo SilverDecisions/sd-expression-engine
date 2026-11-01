@@ -51,8 +51,12 @@ which change with sensitivity analyses and random draws.
   the new field below is a **legacy** file.
 - New field written on save, e.g. `data.expressionSemantics: "mathjs-15"` (a
   name of the expression semantics, not of the app version, so that a later
-  Math.js upgrade can add another one). Jobs in the job repository store the
-  semantics of their data model together with the job instance.
+  Math.js upgrade can add another one).
+- Jobs: sd-computations stores the semantics of the engine in every job
+  execution (`expressionSemantics: "mathjs-<major>"`; records without it are
+  Math.js 9) and continues a stopped job only under the semantics it was
+  started with; otherwise the old job is kept and a new one starts from the
+  beginning (sd-computations `fix/job-resume-semantics`).
 
 ### 2. Classification on opening a legacy file (before any recomputation)
 
@@ -108,8 +112,9 @@ SilverDecisions x.y), not recomputed, until the user decides:
 Accepting writes `expressionSemantics` (and e.g. `migratedFrom: "1.2.1"`) into
 the diagram; the next save stores it and later openings do not warn. Without a
 save the warning appears again (the file is still legacy). Jobs: results of
-jobs stored by 0.1.x are data and are shown as they are; a re-run uses the
-semantics of the current data model.
+jobs completed by 0.1.x are data and are shown as they are; a re-run uses the
+semantics of the current data model; a job stopped by 0.1.x is not continued
+(section 1).
 
 ### Costs and open points
 
