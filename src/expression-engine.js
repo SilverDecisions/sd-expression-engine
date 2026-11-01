@@ -13,82 +13,61 @@ sdRandom.functionNameList.forEach(fnName => {
     }
 });
 
-// Math.js 14+ (fraction.js 5) computes Fractions exactly with bigint numerators
-// and denominators: a sum of many evaluated (float) values, e.g. the expected
-// values of the probabilistic sensitivity analysis, grows to thousands of digits,
-// gets slow and its JS number (valueOf) becomes NaN. With Math.js 9 (fraction.js
-// 4) numerator and denominator were doubles: about 16 significant digits at any
-// magnitude. The arithmetic helpers therefore keep a result exact while its
-// numerator and denominator have at most MAX_BITS bits, and otherwise replace it
-// with the first continued-fraction convergent within a relative error of
-// 2^-RELATIVE_BITS (about 5e-20). Small values keep their magnitude; results
-// are exact up to 64-bit numerators and denominators (Math.js 9: 53 bits) and
-// otherwise about 2000 times more precise than a double. The bounds keep the
-// cost of long sums close to Math.js 9.
-const MAX_BITS = 64;
-const RELATIVE_BITS = BigInt(64);
+// Fractions of Math.js 14+ (fraction.js 5) hold bigint numerators and
+// denominators. fraction.js 5 valueOf() is Number(n) / Number(d): it rounds n and
+// d first and gives Infinity or NaN when they are beyond the double range,
+// although the quotient may not be. toFloat therefore converts with bigint:
+// the result is the double nearest to n / d, ties to even (IEEE 754
+// round-to-nearest), including subnormal results and overflow to +-Infinity.
 const ZERO = BigInt(0);
 const ONE = BigInt(1);
-
-function abs(v) {
-    return v < ZERO ? -v : v;
-}
+const TWO = BigInt(2);
 
 function bitLength(v) {
-    return v === ZERO ? 0 : abs(v).toString(2).length;
+    return v === ZERO ? 0 : (v < ZERO ? -v : v).toString(2).length;
 }
 
-function roundFraction(f) {
-    if (!math.isFraction(f) || (bitLength(f.n) <= MAX_BITS && bitLength(f.d) <= MAX_BITS)) {
-        return f;
-    }
-    // f.n > 0 here (zero is 0/1); convergents p1/q1 of f.n/f.d
-    const x = f.n, y = f.d;
-    let p0 = ZERO, q0 = ONE, p1 = ONE, q1 = ZERO;
-    let n = x, d = y;
-    while (d !== ZERO) {
-        const a = n / d;
-        const p2 = a * p1 + p0;
-        const q2 = a * q1 + q0;
-        p0 = p1;
-        q0 = q1;
-        p1 = p2;
-        q1 = q2;
-        const r = n - a * d;
-        n = d;
-        d = r;
-        // |p1/q1 - x/y| <= 2^-RELATIVE_BITS * x/y, cross-multiplied
-        if ((abs(p1 * y - x * q1) << RELATIVE_BITS) <= x * q1) {
-            break;
-        }
-    }
-    return new math.Fraction(f.s * p1, q1);
-}
-
-// JS number of a Fraction. fraction.js 5 valueOf() is Number(n) / Number(d),
-// which is Infinity or NaN when n or d is beyond the double range (about 2^1024)
-// although the quotient is not; such Fractions are divided with bigint to 64
-// significant bits and scaled by a power of two.
-function fractionToFloat(f) {
-    const nBits = bitLength(f.n);
-    const dBits = bitLength(f.d);
-    if (nBits <= 1000 && dBits <= 1000) {
-        return f.valueOf();
-    }
-    if (f.n === ZERO) {
-        return 0;
-    }
-    // q = floor(n * 2^-e / d) has 64 or 65 bits
-    const e = nBits - dBits - 64;
-    const q = e >= 0 ? f.n / (f.d << BigInt(e)) : (f.n << BigInt(-e)) / f.d;
-    let v = Number(q);
-    let k = e;
+// x * 2^k without intermediate overflow or underflow (k may exceed the exponent range)
+function scale(x, k) {
     while (k !== 0) {
         const step = Math.max(-1000, Math.min(1000, k));
-        v *= Math.pow(2, step);
+        x *= Math.pow(2, step);
         k -= step;
     }
-    return f.s < ZERO ? -v : v;
+    return x;
+}
+
+function fractionToFloat(f) {
+    const n = f.n < ZERO ? -f.n : f.n;
+    const d = f.d;
+    const negative = f.s < ZERO;
+    let v;
+    if (n === ZERO) {
+        v = 0;
+    } else if (bitLength(n) <= 53 && bitLength(d) <= 53) {
+        // exact integers, one correctly rounded division
+        v = Number(n) / Number(d);
+    } else if ((n << BigInt(1022)) < d) {
+        // subnormal (below 2^-1022): round n / d * 2^1074 to an integer, ties to even
+        const t = n << BigInt(1074);
+        let q = t / d;
+        const r2 = (t - q * d) * TWO;
+        if (r2 > d || (r2 === d && (q & ONE) === ONE)) {
+            q += ONE;
+        }
+        v = Number(q) * Math.pow(2, -1074);
+    } else {
+        // q = floor(n / d * 2^k) with at least 55 bits; a set lowest bit for a
+        // non-zero remainder (sticky bit) lets Number(q) round correctly to 53 bits
+        const k = 55 - (bitLength(n) - bitLength(d));
+        let q = k >= 0 ? (n << BigInt(k)) / d : n / (d << BigInt(-k));
+        const exact = k >= 0 ? q * d === n << BigInt(k) : q * (d << BigInt(-k)) === n;
+        if (!exact) {
+            q |= ONE;
+        }
+        v = scale(Number(q), -k);
+    }
+    return negative ? -v : v;
 }
 
 
@@ -131,19 +110,19 @@ export class ExpressionEngine {
     }
 
     static add(a, b) {
-        return roundFraction(math.add(ExpressionEngine.toNumber(a), ExpressionEngine.toNumber(b)));
+        return math.add(ExpressionEngine.toNumber(a), ExpressionEngine.toNumber(b));
     }
 
     static subtract(a, b) {
-        return roundFraction(math.subtract(ExpressionEngine.toNumber(a), ExpressionEngine.toNumber(b)));
+        return math.subtract(ExpressionEngine.toNumber(a), ExpressionEngine.toNumber(b));
     }
 
     static divide(a, b) {
-        return roundFraction(math.divide(ExpressionEngine.toNumber(a), ExpressionEngine.toNumber(b)));
+        return math.divide(ExpressionEngine.toNumber(a), ExpressionEngine.toNumber(b));
     }
 
     static multiply(a, b) {
-        return roundFraction(math.multiply(ExpressionEngine.toNumber(a), ExpressionEngine.toNumber(b)));
+        return math.multiply(ExpressionEngine.toNumber(a), ExpressionEngine.toNumber(b));
     }
 
     static round(a, places) {
