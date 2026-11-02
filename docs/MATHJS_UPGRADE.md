@@ -52,7 +52,8 @@ which change with sensitivity analyses and random draws.
 - New field written on save, e.g. `data.expressionSemantics: "mathjs-15"` (a
   name of the expression semantics, not of the app version, so that a later
   Math.js upgrade can add another one).
-- Jobs: sd-computations (`fix/job-resume-semantics`) stores an expression
+- Jobs (sd-computations `fix/job-resume-semantics`, a draft, not ready to be
+  merged on its own, see the decision on expressions below): it stores an expression
   semantics profile in every job execution: profile version, full Math.js
   version and the whole Math.js configuration (records without it: 0.1.17 with
   its defaults). A stopped job is continued only under the same profile;
@@ -63,7 +64,9 @@ which change with sensitivity analyses and random draws.
   expression: such a diagram cannot run restartable analyses in the
   SilverDecisions worker (the worker evaluated its code, the page did not) until
   expressions either may not change the configuration or each evaluation gets a
-  configuration owned by the diagram (a decision, see below).
+  configuration owned by the diagram (a decision, see below). This refusal
+  applies with 0.1.17 too. The profile does not cover the rest of the mutable
+  Math.js state (`createUnit`, `import`).
 
 ### 2. Classification on opening a legacy file (before any recomputation)
 
