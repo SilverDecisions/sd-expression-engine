@@ -54,9 +54,15 @@ browserslist config); class fields are assignments (Babel 6
 `transform-class-properties`). Math.js (`lib/cjs`, through its `require`
 export condition, as browserify resolves `main`) and its dependencies are
 bundled as published, not compiled; the `browser` fields are honoured
-(decimal.js, seedrandom without Node's `crypto`). The Babel 6 plugins are kept
-for compatibility with the consumers' transform; a migration of that
-configuration (and Babel 8) is a separate task.
+(decimal.js, seedrandom without Node's `crypto`). The Babel 6 plugins are kept:
+the `browserify.transform` field of sd-utils 0.1.15 names them, and the build,
+the specs and the consumers compile sd-utils with it. A migration of these
+fields (and Babel 8) is a separate task.
+
+The bundled versions come from `package-lock.json`. A fresh install of the
+package resolves the Math.js dependencies from the ranges of Math.js 9.5.0 and
+can get newer ones (complex.js 2.4 is not ES5); `npm run test:build` reports
+their syntax for its consumer install.
 
 `npm run test:build` (`scripts/check-build.js`): copy of the working tree,
 `npm ci`, build without warnings, the six artifacts exist and the bundles are
