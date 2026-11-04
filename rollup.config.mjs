@@ -54,7 +54,9 @@ function outputs(file, output) {
     const common = Object.assign({exports: 'auto'}, output);
     return [
         Object.assign({file: file + '.js', sourcemap: 'inline'}, common),
-        Object.assign({file: file + '.min.js', sourcemap: true, plugins: [terser()]}, common)
+        // toplevel: false, as for the other formats: @rollup/plugin-terser turns it on for cjs,
+        // which moves the variables of the require wrapper into the global scope
+        Object.assign({file: file + '.min.js', sourcemap: true, plugins: [terser({toplevel: false})]}, common)
     ];
 }
 

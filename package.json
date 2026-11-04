@@ -9,6 +9,7 @@
     "test": "node test/contract/run.js && jasmine --config=test/jasmine.json",
     "test:published": "node test/contract/run.js --published=0.1.17",
     "test:build": "node scripts/check-build.js",
+    "test:bundle-set": "node test/bundle-set/run.js",
     "release": "release-it --verbose"
   },
   "repository": {
