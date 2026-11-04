@@ -93,12 +93,26 @@ artifact, chosen with `SD_EXPRESSION_ENGINE_TARGET`:
 
 `SD_EXPRESSION_ENGINE_DIST=<dir>` tests the bundles of another `dist/` directory.
 
+For the `module` targets `test/contract/bundle-isolation.test.js` loads the module bundle as a script into a fresh
+global scope and checks that it adds only `require`, keeps its exports and
+cache when another `require` bundle is loaded after it, passes other names
+along the `require` chain (`MODULE_NOT_FOUND` for unknown ones) and evaluates
+the module on the first `require`.
+`npm run test:bundle-set` (`test/bundle-set`) loads the module bundles of
+sd-utils, sd-random, sd-model and this package, plain and minified, into one
+global scope in all load orders and uses each library; `--sd-utils=`,
+`--sd-random=`, `--sd-model=`, `--sd-expression-engine=` take a `dist/`
+directory, a tarball or `published[@version]` (defaults: the installed
+sd-utils / sd-random, the published sd-model, `./dist`). `npm run test:build`
+runs it on the fresh build (`--sd-model=<.tgz>` for an unreleased sd-model).
+
 ```bash
 npm test                                   # all five targets on ./dist and the sources, then Jasmine
 SD_EXPRESSION_ENGINE_TARGET=module node --test test/contract/   # one target
 node test/contract/run.js --targets=module,source
 node test/contract/run.js --dist=<dir>     # another dist/ directory
 npm run test:published                     # the bundles of sd-expression-engine@0.1.17 from npm
+npm run test:bundle-set                    # the four module bundles in one global scope
 npx jasmine --config=test/jasmine.json     # the Jasmine specs (test/specs) in Node
 ```
 

@@ -12,7 +12,9 @@
 //  5. the contract tests against the four fresh bundles (dist/standalone and
 //     dist/sd-expression-engine.js after dist/sd-utils.js and dist/sd-random.js,
 //     plain and minified) and the sources bundled with browserify (target
-//     `source`), and the Jasmine specs
+//     `source`), the Jasmine specs, and test/bundle-set: the module bundles of
+//     sd-utils, sd-random, sd-model and the fresh ones in one global scope
+//     (installed sd-utils / sd-random, sd-model from --sd-model or the registry)
 //  6. `npm pack`: the tarball contains the entry points, sources and dist; it is
 //     installed into an empty consumer that bundles require('sd-expression-engine')
 //     with browserify + babelify (the package's browserify.transform field, like
@@ -24,11 +26,12 @@
 //     outside dist/ changes
 //
 // Usage: node scripts/check-build.js [--keep] [--skip-consumer]
-//                                    [--sd-utils=<.tgz>] [--sd-random=<.tgz>]
+//                                    [--sd-utils=<.tgz>] [--sd-random=<.tgz>] [--sd-model=<.tgz>]
 //   --sd-utils / --sd-random  install these tarballs in the copy and in the
 //               consumer instead of the locked / published versions (integration
 //               check of unreleased packages); package.json and the lockfile of
 //               the working tree are not changed
+//   --sd-model  the sd-model tarball for test/bundle-set (default: the published one)
 'use strict';
 
 const fs = require('fs');
@@ -234,6 +237,19 @@ function sourceMapProblem(file, minified, projectDir) {
     return null;
 }
 
+function runBundleSet(dir) {
+    const sdModel = option('--sd-model') ? ['--sd-model=' + path.resolve(option('--sd-model'))] : [];
+    const r = run(process.execPath, [path.join('test', 'bundle-set', 'run.js'), '--test-reporter=tap'].concat(sdModel), {cwd: dir});
+    const count = name => (r.log.match(new RegExp('^# ' + name + ' (\\d+)', 'm')) || [])[1];
+    const summary = 'tests ' + count('tests') + ', pass ' + count('pass') + ', fail ' + count('fail');
+    if (r.status === 0 && count('fail') === '0' && Number(count('pass')) > 0) {
+        ok('bundle set (module bundles of sd-utils, sd-random, sd-model and the fresh ones in one scope): ' + summary);
+    } else {
+        console.error(r.log.split('\n').filter(l => /^(sd-|not ok)|unexpected|gave|instead|error/.test(l)).slice(0, 30).join('\n'));
+        fail('bundle set: ' + summary);
+    }
+}
+
 function runTests(dir, target, env) {
     // TAP: the default reporter of Node 24 prints no summary lines to parse
     const files = fs.readdirSync(path.join(dir, 'test', 'contract')).filter(f => f.endsWith('.test.js')).map(f => path.join('test', 'contract', f));
@@ -328,6 +344,7 @@ function main() {
             runTests(copy, target);
         }
         runJasmine(copy);
+        runBundleSet(copy);
 
         // 6 (before 7, which breaks the sources of its own copy)
         if (!flag('--skip-consumer')) {

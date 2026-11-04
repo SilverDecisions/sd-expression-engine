@@ -4,6 +4,17 @@
 
 ### Build
 
+- The minified module bundle `dist/sd-expression-engine.min.js` keeps the
+  state of its `require` wrapper (module cache, factories, previous `require`)
+  in its own closure: `@rollup/plugin-terser` defaults to `toplevel: true` for
+  the cjs output and turned the wrapper into global variables, so two minified
+  module bundles in one scope overwrote each other (`Maximum call stack size
+  exceeded`, `r is not a function`). Terser now runs with `toplevel: false`;
+  the plain and standalone files are unchanged.
+  `test/contract/bundle-isolation.test.js` checks the globals, the cache and
+  the `require` chain of the module bundle. `npm run test:bundle-set` loads
+  the module bundles of sd-utils, sd-random, sd-model and this package
+  together in all load orders (`test/bundle-set`).
 - The `dist/` bundles are built with Rollup and npm scripts instead of
   gulp/browserify (`npm run build`). Same files, formats and globals:
   `dist/sd-expression-engine(.min).js` defines the global `require` exposing
