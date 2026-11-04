@@ -1,0 +1,9 @@
+{
+  "spec_dir": "test",
+  "spec_files": ["specs/**/*.spec.js"],
+  "helpers": ["jasmine-babel.js"],
+  "jsLoader": "require",
+  "env": {
+    "random": false
+  }
+}
