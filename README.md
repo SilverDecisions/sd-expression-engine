@@ -1,6 +1,6 @@
 # sd-expression-engine
 SilverDecisions expression engine module: evaluation of the expressions of
-SilverDecisions diagrams with [Math.js](https://mathjs.org/) 9.5.0, exact
+SilverDecisions diagrams with [Math.js](https://mathjs.org/) 15.2.0, exact
 Fraction arithmetic and the sd-random distributions.
 
 [![CI](https://github.com/SilverDecisions/sd-expression-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/SilverDecisions/sd-expression-engine/actions/workflows/ci.yml)
@@ -29,15 +29,23 @@ Built files (`dist/`, committed, rebuilt by the release):
 
 The plain files carry an inline source map, the minified ones a `.map` file.
 
+Runtime requirements: Math.js 13+ requires ES2020 and `BigInt` (Chrome and Edge 80+,
+Firefox 74+, Safari 14+ from the ES2020 features used, not tested in those
+browsers; no Internet Explorer). The package sources compile to
+ES5; the bundles and consumer bundles contain Math.js as published (ES2020).
+Releases up to 0.1.17 (Math.js 9.5.0) ran on ES5 engines.
+
 ## Development
 
 Node 24 (`.nvmrc`); CI runs Node 22 and 24 on Linux and a build smoke test on
-Windows. Math.js is pinned to exactly 9.5.0.
+Windows. Math.js is pinned to an exact version (15.2.0).
 
 ```bash
 npm ci
 npm run build        # dist/ with Rollup (rollup.config.mjs), ~2 min (terser on the large bundles)
-npm test             # contract tests on dist/ and the sources, Jasmine specs in Node
+npm test             # contract tests on the sources (browserify + transform), Jasmine specs in Node
+npm run test:dist    # contract tests on the four bundles in dist/ (after npm run build)
+npm run test:baseline  # the committed dist/ (0.1.17 build) against the 0.1.17 contract
 npm run test:build   # isolated build check, see scripts/check-build.js
 ```
 
@@ -49,8 +57,8 @@ and sd-random are compiled first by `scripts/browserify-transform.mjs` with the
 Babel 7 options of their own `browserify.transform` field and CommonJS modules,
 exactly as babelify compiles them for consumers, so the module interop
 (`src/mathjs.js` sets `module.exports`, `import * as math`) is Babel's.
-Compilation target: ES5 syntax (`@babel/preset-env` without targets, no
-browserslist config); class fields are assignments (Babel 6
+Compilation target of the package sources: ES5 syntax (`@babel/preset-env`
+without targets, no browserslist config); class fields are assignments (Babel 6
 `transform-class-properties`). Math.js (`lib/cjs`, through its `require`
 export condition, as browserify resolves `main`) and its dependencies are
 bundled as published, not compiled; the `browser` fields are honoured
@@ -59,8 +67,8 @@ for compatibility with the consumers' transform; a migration of that
 configuration (and Babel 8) is a separate task.
 
 `npm run test:build` (`scripts/check-build.js`): copy of the working tree,
-`npm ci`, build without warnings, the six artifacts exist and the bundles are
-ES5, source maps are valid JSON with `sources`/`sourcesContent` and map a known
+`npm ci`, build without warnings, the six artifacts exist and the bundles parse
+as ES2020 (the package sources compiled by a consumer as ES5), source maps are valid JSON with `sources`/`sourcesContent` and map a known
 statement back to `src/expression-engine.js`, nothing changed outside `dist/`,
 contract tests on the four fresh bundles and the sources, Jasmine specs,
 `npm pack` installed into an empty browserify 17 + babelify 10 consumer (contract
@@ -86,19 +94,28 @@ artifact, chosen with `SD_EXPRESSION_ENGINE_TARGET`:
 | a file path | a CommonJS module exporting the package namespace |
 
 `SD_EXPRESSION_ENGINE_DIST=<dir>` tests the bundles of another `dist/` directory.
+`SD_EXPRESSION_ENGINE_BASELINE=<release>` (`0.1.17`) tests built artifacts of
+that release against its contract: the Math.js version it contains (9.5.0) and
+the version-dependent expectations; without it the current contract applies
+(Math.js of `package.json`) and a bundle with another Math.js version fails.
 
 ```bash
-npm test                                   # all five targets on ./dist and the sources, then Jasmine
+npm test                                   # the sources (target source), then Jasmine
+node test/contract/run.js                  # all five targets on ./dist and the sources
+npm run test:baseline                      # committed dist/ against the 0.1.17 contract
 SD_EXPRESSION_ENGINE_TARGET=module node --test test/contract/   # one target
 node test/contract/run.js --targets=module,source
 node test/contract/run.js --dist=<dir>     # another dist/ directory
-npm run test:published                     # the bundles of sd-expression-engine@0.1.17 from npm
+npm run test:published                     # the bundles of sd-expression-engine@0.1.17 from npm (0.1.17 contract)
 npx jasmine --config=test/jasmine.json     # the Jasmine specs (test/specs) in Node
 ```
 
-The committed `dist/` is the 0.1.17 release build (gulp/browserify): `npm test`
-on a fresh checkout tests it (CI does so as well), `npm run test:build` tests a
-fresh build. The Jasmine specs compile the sources with `@babel/register`
+The committed `dist/` is the 0.1.17 release build (gulp/browserify, Math.js
+9.5.0) until the next release: `npm run test:baseline` tests it against the
+0.1.17 contract (CI does so as well), `npm test` the current sources and
+`npm run test:build` a fresh build. Tests whose expectation depends on the Math.js
+version (`test/contract/mathjs-version.test.js`, `[version difference]`) assert
+both versions explicitly. The Jasmine specs compile the sources with `@babel/register`
 (`test/jasmine-babel.js`) and run in Node; the bundles are not run in a real
 browser or Web Worker by these tests (see the integration notes of the PRs).
 
@@ -129,7 +146,9 @@ pass while the defect is present and fail once it is fixed.
   `eval(expr, false)` reject them.
 - `serialize(±Infinity)` and `round(±Infinity)` throw; `add` / `divide` of
   `Infinity` and a finite value throw (implicit conversion to Fraction).
-- `median` and `std` do not accept Fractions (Math.js 9, `number` config).
+- `median` and `std` do not accept Fractions (`number` config).
+- An expression can change the shared Math.js configuration for all later
+  evaluations (`config({number: "BigNumber"})`).
 - `isExpressionObject` is false for a live Fraction; the replacer works inside
   `JSON.stringify`, which calls `toJSON()` first.
 - The Math.js instance is shared: `createUnit` in an expression changes it for

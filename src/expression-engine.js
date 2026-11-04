@@ -13,6 +13,63 @@ sdRandom.functionNameList.forEach(fnName => {
     }
 });
 
+// Fractions of Math.js 14+ (fraction.js 5) hold bigint numerators and
+// denominators. fraction.js 5 valueOf() is Number(n) / Number(d): it rounds n and
+// d first and gives Infinity or NaN when they are beyond the double range,
+// although the quotient may not be. toFloat therefore converts with bigint:
+// the result is the double nearest to n / d, ties to even (IEEE 754
+// round-to-nearest), including subnormal results and overflow to +-Infinity.
+const ZERO = BigInt(0);
+const ONE = BigInt(1);
+const TWO = BigInt(2);
+
+function bitLength(v) {
+    return v === ZERO ? 0 : (v < ZERO ? -v : v).toString(2).length;
+}
+
+// x * 2^k without intermediate overflow or underflow (k may exceed the exponent range)
+function scale(x, k) {
+    while (k !== 0) {
+        const step = Math.max(-1000, Math.min(1000, k));
+        x *= Math.pow(2, step);
+        k -= step;
+    }
+    return x;
+}
+
+function fractionToFloat(f) {
+    const n = f.n < ZERO ? -f.n : f.n;
+    const d = f.d;
+    const negative = f.s < ZERO;
+    let v;
+    if (n === ZERO) {
+        v = 0;
+    } else if (bitLength(n) <= 53 && bitLength(d) <= 53) {
+        // exact integers, one correctly rounded division
+        v = Number(n) / Number(d);
+    } else if ((n << BigInt(1022)) < d) {
+        // subnormal (below 2^-1022): round n / d * 2^1074 to an integer, ties to even
+        const t = n << BigInt(1074);
+        let q = t / d;
+        const r2 = (t - q * d) * TWO;
+        if (r2 > d || (r2 === d && (q & ONE) === ONE)) {
+            q += ONE;
+        }
+        v = Number(q) * Math.pow(2, -1074);
+    } else {
+        // q = floor(n / d * 2^k) with at least 55 bits; a set lowest bit for a
+        // non-zero remainder (sticky bit) lets Number(q) round correctly to 53 bits
+        const k = 55 - (bitLength(n) - bitLength(d));
+        let q = k >= 0 ? (n << BigInt(k)) / d : n / (d << BigInt(-k));
+        const exact = k >= 0 ? q * d === n << BigInt(k) : q * (d << BigInt(-k)) === n;
+        if (!exact) {
+            q |= ONE;
+        }
+        v = scale(Number(q), -k);
+    }
+    return negative ? -v : v;
+}
+
 
 export class ExpressionEngine {
 
@@ -73,6 +130,10 @@ export class ExpressionEngine {
     }
 
     static toNumber(a) {
+        if (math.isUnit(a)) {
+            // Math.js 14+ converts the value of a Unit; a payoff or probability is a number
+            throw new TypeError('Unexpected type of argument in function fraction (actual: Unit)');
+        }
         let parsed = parseFloat(a);
         if (parsed === Infinity || parsed === -Infinity) {
             return parsed;
@@ -192,6 +253,9 @@ export class ExpressionEngine {
     }
 
     static toFloat(number) {
+        if (math.isFraction(number)) {
+            return fractionToFloat(number);
+        }
         return math.number(number);
     }
 

@@ -6,7 +6,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const {ExpressionEngine} = require('./load');
+const {ExpressionEngine, mathjsMajor} = require('./load');
 const {assertFraction, knownBug} = require('./helpers');
 
 const N = ExpressionEngine.toNumber;
@@ -75,8 +75,11 @@ test('add, subtract, multiply, divide: exact on Fractions, arguments converted w
 test('arithmetic with Infinity [current behaviour]: only ±Infinity together are numbers, Infinity with a Fraction throws', () => {
     assert.ok(Number.isNaN(ExpressionEngine.add(Infinity, -Infinity)));
     assert.equal(ExpressionEngine.add(Infinity, Infinity), Infinity);
-    assert.throws(() => ExpressionEngine.add(Infinity, 1), /Cannot implicitly convert a number to a Fraction/);
-    assert.throws(() => ExpressionEngine.divide(1, Infinity), /Cannot implicitly convert a number to a Fraction/);
+    // the message is Math.js': 9.x refuses the implicit conversion, 14+ (fraction.js 5,
+    // bigint) cannot convert Infinity to a bigint
+    const message = mathjsMajor < 14 ? /Cannot implicitly convert a number to a Fraction/ : /Infinity cannot be converted to a BigInt/;
+    assert.throws(() => ExpressionEngine.add(Infinity, 1), message);
+    assert.throws(() => ExpressionEngine.divide(1, Infinity), message);
 });
 
 test('compare: -1/0/1 for Fractions, ±Infinity handled before Math.js', () => {

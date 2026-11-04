@@ -16,3 +16,8 @@ Normalization: global code that calls `random()` cannot be repeated, so for such
 files the saved `expressionScope` (the result of that code when the file was
 saved) is used as the diagram scope instead of evaluating the code again. No
 other value is changed or recomputed from the current implementation.
+
+`tofloat_cases.json` (not a diagram): Fractions and the correctly rounded double
+of each (ties to even, subnormals, overflow, random large Fractions), generated
+with Python's `fractions.Fraction` by `tofloat_cases.py`; regenerate with
+`python3 -I test/contract/fixtures/tofloat_cases.py > test/contract/fixtures/tofloat_cases.json`.

@@ -41,10 +41,16 @@ const plugins = () => [
 ];
 
 // Math.js lib/cjs has a few `/* #__PURE__ */` comments Rollup cannot place
-// (INVALID_ANNOTATION, the comment is dropped, the code is unchanged); every
-// other warning is reported.
+// (INVALID_ANNOTATION, the comment is dropped, the code is unchanged) and, from
+// Math.js 15, circular requires among its own utils (object -> is -> map ->
+// customs), which CommonJS (strictRequires) resolves as Node does; every other
+// warning is reported.
+const MATHJS = /[\\/]node_modules[\\/]mathjs[\\/]/;
 function onwarn(warning, warn) {
-    if (warning.code === 'INVALID_ANNOTATION' && /[\\/]node_modules[\\/]mathjs[\\/]/.test(warning.id || '')) {
+    if (warning.code === 'INVALID_ANNOTATION' && MATHJS.test(warning.id || '')) {
+        return;
+    }
+    if (warning.code === 'CIRCULAR_DEPENDENCY' && (warning.ids || []).length && warning.ids.every(id => MATHJS.test(id))) {
         return;
     }
     warn(warning);

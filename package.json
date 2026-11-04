@@ -6,7 +6,9 @@
   "scripts": {
     "clean": "node scripts/clean.js",
     "build": "npm run clean && rollup -c",
-    "test": "node test/contract/run.js && jasmine --config=test/jasmine.json",
+    "test": "node test/contract/run.js --targets=source && jasmine --config=test/jasmine.json",
+    "test:dist": "node test/contract/run.js --targets=standalone,standalone.min,module,module.min",
+    "test:baseline": "node test/contract/run.js --baseline=0.1.17",
     "test:published": "node test/contract/run.js --published=0.1.17",
     "test:build": "node scripts/check-build.js",
     "release": "release-it --verbose"
@@ -69,7 +71,7 @@
     "rollup": "^4.67.3"
   },
   "dependencies": {
-    "mathjs": "9.5.0",
+    "mathjs": "15.2.0",
     "sd-utils": "^0.1.15",
     "sd-random": "^0.1.4"
   }

@@ -5,7 +5,10 @@
 //   node test/contract/run.js --targets=module,source
 //   node test/contract/run.js --dist=<dir>          the bundles of another dist/ directory
 //   node test/contract/run.js --published[=0.1.17]  the bundles of the package on the npm registry
-//                                                   (npm pack into a temporary directory)
+//                                                   (npm pack into a temporary directory), tested
+//                                                   against the contract of that release
+//   node test/contract/run.js --baseline[=0.1.17]   the committed dist/ (the build of that release)
+//                                                   against the contract of that release
 //
 // Each target runs in its own `node --test` process (SD_EXPRESSION_ENGINE_TARGET,
 // SD_EXPRESSION_ENGINE_DIST, see load.js). Exits with 1 if any target fails.
@@ -27,6 +30,10 @@ const BUNDLES = ['standalone', 'standalone.min', 'module', 'module.min'];
 let dist = option('dist');
 let tmp = null;
 const published = option('published');
+const baselineOption = option('baseline');
+// the committed dist/ is the 0.1.17 release build until the next release
+const BASELINE = '0.1.17';
+let baseline = baselineOption ? (baselineOption === true ? BASELINE : baselineOption) : null;
 
 function npm(npmArgs, cwd) {
     // npm is npm.cmd on Windows; run it through the shell there
@@ -38,7 +45,8 @@ function npm(npmArgs, cwd) {
 }
 
 if (published) {
-    const version = published === true ? require(path.join(root, 'package.json')).version : published;
+    const version = published === true ? BASELINE : published;
+    baseline = version;
     tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'sd-ee-published-'));
     const tgz = npm(['pack', 'sd-expression-engine@' + version, '--silent'], tmp).trim().split(/\r?\n/).pop();
     childProcess.execFileSync('tar', ['-xzf', tgz], {cwd: tmp});
@@ -47,14 +55,17 @@ if (published) {
 }
 
 const targetsOption = option('targets');
-const targets = targetsOption ? String(targetsOption).split(',') : (dist ? BUNDLES : BUNDLES.concat('source'));
+const targets = targetsOption ? String(targetsOption).split(',') : (dist || baseline ? BUNDLES : BUNDLES.concat('source'));
 const files = fs.readdirSync(__dirname).filter(f => f.endsWith('.test.js')).sort().map(f => path.join(__dirname, f));
 
 const failed = [];
 try {
     for (const target of targets) {
-        console.log('\n=== contract tests: ' + target + (dist ? ' (' + dist + ')' : ''));
+        console.log('\n=== contract tests: ' + target + (dist ? ' (' + dist + ')' : '') + (baseline ? ', contract of ' + baseline : ''));
         const env = Object.assign({}, process.env, {SD_EXPRESSION_ENGINE_TARGET: target});
+        if (baseline) {
+            env.SD_EXPRESSION_ENGINE_BASELINE = baseline;
+        }
         if (dist) {
             env.SD_EXPRESSION_ENGINE_DIST = path.resolve(dist);
         }
